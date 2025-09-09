@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.graph_objs as go
 import os
 from openai import OpenAI
+from dotenv import load_dotenv
 
 # --- import your strategy + utils ---
 from strategies.dca import run_dca_strategy
@@ -17,7 +18,10 @@ from core.performance import compute_performance_metrics
 
 
 # 🔑 Set your API key (better: load from env var)
-x = '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'
+load_dotenv()
+
+x = os.getenv("OPENAI_API_KEY")
+
 os.environ["OPENAI_API_KEY"] = x
 client = OpenAI(api_key=x)
 

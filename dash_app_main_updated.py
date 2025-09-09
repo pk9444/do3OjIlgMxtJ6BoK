@@ -17,7 +17,7 @@ from core.equity import equity_curve_from_trades, merge_equity_curves
 from core.performance import compute_performance_metrics
 
 
-# 🔑 Set your API key (better: load from env var)
+#  Set your API key (better: load from env var)
 load_dotenv()
 
 x = os.getenv("OPENAI_API_KEY")

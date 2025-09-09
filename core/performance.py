@@ -1,11 +1,16 @@
 import numpy as np
 import pandas as pd
 
+"""
+compute_performance_metrics() : function to compute and compile the performing metrics of each strategy
+@params : trades - array containing the trades made by the strategy 
+          initial budget - set by the user like 10K, 100K etc 
+          final_value - final value of the BTC after a trade is made (Up or Down)
+ @return : an output dictionary containing essential performance metrics  
+"""
 def compute_performance_metrics(trades, initial_budget, final_value):
-    """
-    Compute performance metrics from trade history and portfolio value.
-    """
-    # --- Convert trades into PnL series ---
+
+    # Convert trades into PnL series
     pnl_list = []
     win_trades, loss_trades = [], []
     

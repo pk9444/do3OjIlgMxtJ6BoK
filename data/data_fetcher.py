@@ -5,15 +5,15 @@ import yfinance as yf
 
 BINANCE_URL = "https://api.binance.com/api/v3/klines"
 
+"""
+get_binance_ohlcv() : function to fetch the OHLCV historical data from Binance API
+@params : symbol - Trading pair (default BTC/USDT)
+          interval - Candle interval (1m, 5m, 1h, 1d, etc.)
+          limit - Number of candles (max 1000)
+@return: an output pandas dataframe with columns: [time, open, high, low, close, volume]
+"""
 def get_binance_ohlcv(symbol="BTCUSDT", interval="1d", limit=500):
-    """
-    Fetch OHLCV historical data from Binance.
-    
-    :param symbol: Trading pair (default BTC/USDT)
-    :param interval: Candle interval (1m, 5m, 1h, 1d, etc.)
-    :param limit: Number of candles (max 1000)
-    :return: DataFrame with columns: [time, open, high, low, close, volume]
-    """
+
     params = {"symbol": symbol, "interval": interval, "limit": limit}
     response = requests.get(BINANCE_URL, params=params)
     data = response.json()
@@ -32,13 +32,15 @@ def get_binance_ohlcv(symbol="BTCUSDT", interval="1d", limit=500):
 
 
 
+"""
+get_yf_ohlcv() : function to fetch the OHLCV historical data from Yahoo Finance API
+@params : symbol - Trading pair (default BTC-USD)
+          interval - Candle interval (1m, 5m, 1h, 1d, etc.)
+          limit - Number of candles (max 1000)
+@return: an output pandas dataframe with columns: [time, open, high, low, close, volume]
+"""
 
 def get_yf_ohlcv(symbol="BTC-USD", interval="4h", limit=1000):
-    """
-    Fetch OHLCV data from Yahoo Finance and make it consistent with Binance format.
-    Returns:
-        DataFrame with ['timestamp','open','high','low','close','volume']
-    """
     # Fetch 1h data (since yfinance doesn't support 4h directly)
     df = yf.download(symbol, interval="1h", period="60d", progress=False)
 
@@ -72,7 +74,17 @@ def get_yf_ohlcv(symbol="BTC-USD", interval="4h", limit=1000):
     return df
 
 
-# --- Unified fetcher (NEW) ---
+"""
+get_ohlcv() : a unified function to handle data retreival from Binance and YF 
+                -> if Binance not available, fallback and fetch YF data
+@params : symbol_binance - Trading pair (default BTC/USDT)
+          symbol_yf - Trading pair (default BTC-USD)
+          interval - Candle interval (1m, 5m, 1h, 1d, etc.)
+          limit - Number of candles (max 1000)
+@return: an output pandas dataframe with columns: [time, open, high, low, close, volume]
+depending upon exception handler 
+"""
+
 def get_ohlcv(symbol_binance="BTCUSDT", interval="4h", limit=1000,
               symbol_yf="BTC-USD"):
     """

@@ -350,32 +350,40 @@ def update_dashboard(n_clicks, budget):
 @app.callback(
     Output("chat-history", "children"),
     [Input("chat-send", "n_clicks")],
-    [State("chat-input", "value"), 
-     State("chat-history", "children"),
-     State("metrics-table", "data"),   # store metrics
-     State("trades-table", "data")]    # store trades
+    [State("chat-input", "value"), State("chat-history", "children")]
 )
-def update_chat(n_clicks, user_msg, history, metrics, trades):
+def update_chat(n_clicks, user_msg, history):
     if not n_clicks or not user_msg:
         return history
 
-    context = f"""
-    Current Strategy Performance:
-    {pd.DataFrame(metrics).to_string(index=False)}
+    try:
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a crypto trading assistant. Help explain strategies and results."},
+                {"role": "user", "content": user_msg}
+            ],
+        )
+        reply = resp.choices[0].message.content
+    except Exception as e:
+        reply = f"(Error: {e})"
 
-    Recent Trades:
-    {pd.DataFrame(trades).head(10).to_string(index=False)}
-    """
-
-    resp = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a crypto trading assistant that analyzes strategy results."},
-            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {user_msg}"}
-        ]
-    )
-    reply = resp.choices[0].message.content
-    new_history = (history or "") + f"\nUser: {user_msg}\nBot: {reply}\n"
+    new_history = (history or []) + [
+        html.Div(user_msg, style={
+            "textAlign": "right", "margin": "5px 0",
+            "backgroundColor": "#2e7d32", "color": "white",
+            "padding": "8px 12px", "borderRadius": "12px",
+            "maxWidth": "80%", "alignSelf": "flex-end",
+            "display": "inline-block"
+        }),
+        html.Div(reply, style={
+            "textAlign": "left", "margin": "5px 0",
+            "backgroundColor": "#333", "color": "white",
+            "padding": "8px 12px", "borderRadius": "12px",
+            "maxWidth": "80%", "alignSelf": "flex-start",
+            "display": "inline-block"
+        })
+    ]
     return new_history
 
 

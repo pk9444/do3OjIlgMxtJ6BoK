@@ -223,17 +223,19 @@ app.layout = html.Div([
             }
         ),
         html.Div([
-            html.H4("Welcome to BTC Trading Agent! How can I help you today?", style={"marginTop": "0"}),
+            html.H4(["Hi I am Robin! Your real-time BTC trading agent!", html.Br(), "How can I help you today?"], 
+                    style={"marginTop": "0"}),
 
             # Scrollable chat history
             html.Div(id="chat-history", style={
+                "whiteSpace": "pre-line", 
                 "flex": "1",
                 "overflowY": "auto",
                 "padding": "10px",
                 "backgroundColor": "#2c2c2c",
                 "borderRadius": "8px",
                 "marginBottom": "10px",
-                "maxHeight": "70vh"
+                "maxHeight": "80vh"
             }),
 
             # Input row
@@ -241,6 +243,7 @@ app.layout = html.Div([
                 dcc.Input(
                     id="chat-input",
                     type="text",
+                     n_submit=0,
                     placeholder="Ask me something...",
                     style={"flex": "1", "padding": "8px", "borderRadius": "5px", "border": "none"}
                 ),
@@ -350,42 +353,69 @@ def update_dashboard(n_clicks, budget):
 @app.callback(
     Output("chat-history", "children"),
     [Input("chat-send", "n_clicks")],
-    [State("chat-input", "value"), State("chat-history", "children")]
+    [State("chat-input", "value"), 
+     State("chat-history", "children"),
+     State("metrics-table", "data"),   # store metrics
+     State("trades-table", "data")]    # store trades
 )
-def update_chat(n_clicks, user_msg, history):
+
+def update_chat(n_clicks, user_msg, history, metrics, trades):
     if not n_clicks or not user_msg:
         return history
+
+    context = f"""
+    Current Strategy Performance:
+    {pd.DataFrame(metrics).to_string(index=False)}
+
+    Recent Trades:
+    {pd.DataFrame(trades).head(10).to_string(index=False)}
+    """
 
     try:
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a crypto trading assistant. Help explain strategies and results."},
-                {"role": "user", "content": user_msg}
+                {"role": "system", "content": "You are a crypto trading assistant that analyzes strategy results."},
+                {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {user_msg}"}
             ],
         )
         reply = resp.choices[0].message.content
     except Exception as e:
         reply = f"(Error: {e})"
 
-    new_history = (history or []) + [
-        html.Div(user_msg, style={
-            "textAlign": "right", "margin": "5px 0",
-            "backgroundColor": "#2e7d32", "color": "white",
-            "padding": "8px 12px", "borderRadius": "12px",
-            "maxWidth": "80%", "alignSelf": "flex-end",
-            "display": "inline-block"
-        }),
-        html.Div(reply, style={
-            "textAlign": "left", "margin": "5px 0",
-            "backgroundColor": "#333", "color": "white",
-            "padding": "8px 12px", "borderRadius": "12px",
-            "maxWidth": "80%", "alignSelf": "flex-start",
-            "display": "inline-block"
-        })
-    ]
-    return new_history
+    # Format bubbles
+    user_bubble = html.Div(
+        user_msg,
+        style={
+            "backgroundColor": "#2e7d32",   # greenish
+            "color": "white",
+            "padding": "8px 12px",
+            "borderRadius": "12px",
+            "margin": "5px 0",
+            "maxWidth": "80%",
+            "marginLeft": "auto",
+            "alignSelf": "flex-end",
+        }
+    )
 
+    bot_bubble = html.Div(
+        reply,
+        style={
+            "backgroundColor": "#333333",   # dark gray
+            "color": "white",
+            "padding": "8px 12px",
+            "borderRadius": "12px",
+            "margin": "5px 0",
+            "maxWidth": "100%",
+            "marginRight": "auto",
+            "alignSelf": "flex-start",
+            "whiteSpace": "pre-line"
+        }
+    )
+
+    # Append to history
+    new_history = (history or []) + [user_bubble, bot_bubble]
+    return new_history
 
 # ---------- Collapsible Chat Callback ----------
 @app.callback(

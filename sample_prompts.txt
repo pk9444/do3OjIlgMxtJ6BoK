@@ -1,0 +1,21 @@
+1.Performance Analysis Prompts
+
+-Which strategy is performing best right now?
+-Compare ATR Stop-Loss with Swing LSTM regression in terms of PnL and Sharpe ratio.
+-Why did DCA underperform compared to the other strategies?
+-Summarize the performance of all strategies in one sentence.
+
+2. Risk & Portfolio Prompts
+-Which strategy had the highest drawdown, and what does it mean for risk?
+-If I want lower volatility, which strategy should I pick?
+-Explain in plain English what the Sharpe ratio tells me about these results.
+
+3. Trade Behavior Prompts
+-Summarize the last 5 ATR Stop-Loss trades in simple language.
+-Did the Swing LSTM regression strategy make more BUY or SELL trades recently?
+-Which strategy trades the most frequently, and is that good or bad?
+
+4. Forward-Looking / Advisory Prompts
+-If BTC becomes more volatile, which strategy will likely perform better?
+-How should I allocate my budget across DCA, ATR, and LSTM regression?
+-What’s the biggest weakness of the ATR Stop-Loss strategy in these results?

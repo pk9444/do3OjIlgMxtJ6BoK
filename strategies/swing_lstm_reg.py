@@ -36,7 +36,7 @@ def run_swing_lstm_reg_strategy(
     # Load model + scalers
     scaler_X = joblib.load(SCALER_X_PATH)
     scaler_y = joblib.load(SCALER_Y_PATH)
-    input_dim = len(["close","rsi","ema_20","ema_50","macd","macd_signal","atr"])
+    input_dim = len(["prev_close","rsi","ema_20","ema_50","macd","macd_signal","atr"])
     model = LSTMRegressor(input_dim=input_dim)
     model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
     model.eval()

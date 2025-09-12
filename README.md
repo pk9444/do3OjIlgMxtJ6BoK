@@ -39,3 +39,12 @@ Furthermore, five techincal indicators are added as calculated features:
 - **RSI** - *Relative Strength Index* - measure market momentum by comparing the speed and magnitude of recent price changes over 14 days
 - **EMA** - *Exponential Moving Average* - a technical indicator that assigns greater weight to more recent price and help identify entry-exit points in a trade
 - **MACD** - *Moving average convergence/divergence (MACD)* - momentum indicator that shows the relationship between two moving averages of a candle's price
+
+
+## PROJECT GOALS
+
+- Build a BTC Trading Agent that fetches live BTC data ands runs the three strategies on the candles.
+- Analyze the Equity Trends, determine BUY-SELL markers and compares the performance of the three strategies based on standardized metrics.
+- Ideally, the devised strategy, either the ATR Stop-Loss or the Swing Trading with LSTM should perform better than the DCA which is our baseline strategy.
+- Deploy a LLM, that takes these strategies as context and generates trading recommendations to prompts accordingly.
+- Compile a daily BTC log of 3-5 days and send it as an alert (additional goal).  

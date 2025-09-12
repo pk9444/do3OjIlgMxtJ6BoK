@@ -10,7 +10,7 @@ The agent must dynamically manage budget allocation, shift between strategies, a
 - **Average True Range (ATR) Stop-Loss** - For the *Day Trading* Strategy - Trade at high frequency - Stop Loss when BTC drops below a certain threshold
 - **LSTM Neural Network** - For the *Swing Trading* - Trade over time to maximize the profit at a BUY-SELL action
 
-## METHODOLOGY
+## METHODOLOGY FOR THE LSTM SWING TRADING 
 
 <img width="1666" height="582" alt="Apziva_P5_Methodology" src="https://github.com/user-attachments/assets/d92bbf09-98ac-4b08-aa6b-eed54ea3a32b" />
 
@@ -47,4 +47,15 @@ Furthermore, five techincal indicators are added as calculated features:
 - Analyze the Equity Trends, determine BUY-SELL markers and compares the performance of the three strategies based on standardized metrics.
 - Ideally, the devised strategy, either the ATR Stop-Loss or the Swing Trading with LSTM should perform better than the DCA which is our baseline strategy.
 - Deploy a LLM, that takes these strategies as context and generates trading recommendations to prompts accordingly.
-- Compile a daily BTC log of 3-5 days and send it as an alert (additional goal).  
+- Compile a daily BTC log of 3-5 days and send it as an alert (additional goal).
+
+
+## FEATURE ENGINEERING RESULTS
+
+<img width="1488" height="1108" alt="Apziva_P5_Correlation_Map" src="https://github.com/user-attachments/assets/6dfa0434-33ba-4eaa-bf25-0dfa0ac43a3d" />
+
+<img width="1276" height="702" alt="Apziva_P5_MI" src="https://github.com/user-attachments/assets/74cece44-82e9-4d54-a81b-e2e6b8d2da6e" />
+
+<img width="1374" height="674" alt="Apziva_P5_L1_Reg" src="https://github.com/user-attachments/assets/77ce268f-22d5-4e44-a54b-8393440ea821" />
+
+

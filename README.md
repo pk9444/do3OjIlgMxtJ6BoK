@@ -58,4 +58,20 @@ Furthermore, five techincal indicators are added as calculated features:
 
 <img width="1374" height="674" alt="Apziva_P5_L1_Reg" src="https://github.com/user-attachments/assets/77ce268f-22d5-4e44-a54b-8393440ea821" />
 
+### LSTM PERFORMANCE EVALUATION
 
+<img width="1554" height="770" alt="Apziva_P5_LSTM_Results" src="https://github.com/user-attachments/assets/ed4371d2-94dd-4e4c-8fe7-da0abc7a9368" />
+
+#### OBSERVATIONS
+
+**Performance Metrics:**
+- RMSE = 2233.84
+- MAE = 2011.75
+- MAPE = 1.79%
+
+Generally speaking, a MAPE under 5% in financial time-series forecasting is quite decent, given how noisy BTC data tends to be.
+
+**Insights on the Actual V/s Predicted BTC Prices:**
+- Predicted values are comparatively smoother and lag the actual values - so, it means towards taking lower risks in swing trading.
+- Hence, the model is capturing the trend direction, but underestimates volatility and sharp jumps.
+- This is expected for LSTM regression - it minimizes average error, so tends to smoothen instead of chasing spikes.

@@ -58,7 +58,7 @@ def run_swing_lstm_reg_strategy(
     df = df.dropna().reset_index(drop=True)
 
     #features = ["close","rsi","ema_20","ema_50","macd","macd_signal","atr"]
-    features = ["close", "RSI", "SMA_50", "EMA_50", "MACD", "Signal", "ATR"]
+    features = ["prev_close", "RSI", "SMA_50", "EMA_50", "MACD", "Signal", "ATR"]
     trades = []
     portfolio_btc, portfolio_usd = 0.0, budget
 

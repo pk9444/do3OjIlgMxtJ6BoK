@@ -89,8 +89,13 @@ external_stylesheets = [{
     "rel": "stylesheet"
 }]
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, 
+            external_stylesheets=external_stylesheets,
+            assets_folder="assets",
+            suppress_callback_exceptions=True,
+            )
 app.title = "BTC Trading Agent"
+app._favicon = "logo.png" 
 
 app.index_string = """
 <!DOCTYPE html>
@@ -138,6 +143,8 @@ app.index_string = """
 
 # ---------- Layout ----------
 app.layout = html.Div([
+
+    
     html.H1("BTC Trading Agent", style={
         "textAlign": "center",
         "marginBottom": "20px"

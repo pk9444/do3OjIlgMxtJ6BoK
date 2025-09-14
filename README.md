@@ -58,11 +58,16 @@ Furthermore, five techincal indicators are added as calculated features:
 
 <img width="1374" height="674" alt="Apziva_P5_L1_Reg" src="https://github.com/user-attachments/assets/77ce268f-22d5-4e44-a54b-8393440ea821" />
 
-### LSTM PERFORMANCE EVALUATION
+## LSTM PIPELINE
+
+<img width="641" height="452" alt="Apziva_P5_LSTM_Pipeline" src="https://github.com/user-attachments/assets/0611db15-b550-4ce5-9144-77a57b7c831a" />
+
+
+## LSTM PERFORMANCE EVALUATION
 
 <img width="1554" height="770" alt="Apziva_P5_LSTM_Results" src="https://github.com/user-attachments/assets/ed4371d2-94dd-4e4c-8fe7-da0abc7a9368" />
 
-#### OBSERVATIONS
+### OBSERVATIONS
 
 **Performance Metrics:**
 - RMSE = 2233.84

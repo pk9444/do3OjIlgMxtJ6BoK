@@ -22,10 +22,19 @@ class LSTMRegressor(nn.Module):
         out = out[:, -1, :]
         return self.fc(out)
 
+"""
+    run_swing_lstm_reg_strategy() : function to run the LSTM Regression model on the BTC Cancdles 
+    @params : Budget - the total amount available to trade, init to 10K which can be changed
+            trade - how much BTC can be traded in a transcation 
+            prob_threshold - the differential b/w the BUY and SELL - set to 1% - can be changed 
+    start_date: datetime of last known actual
+"""
 def run_swing_lstm_reg_strategy(
     budget=10000,
     trade_size=2000,
-    prob_threshold=0.01  # ~1% move trigger
+    prob_threshold=0.01,  # ~1% move trigger
+    n_steps=7,
+    freq="1D"
 ):
     # Graceful skip if artifacts missing
     if not (os.path.exists(MODEL_PATH) and os.path.exists(SCALER_X_PATH) and os.path.exists(SCALER_Y_PATH)):
@@ -43,12 +52,6 @@ def run_swing_lstm_reg_strategy(
 
     # Get OHLCV
     df = get_ohlcv("BTCUSDT", "4h", 600)
-
-    # df["rsi"] = compute_rsi(df["close"], 14)
-    # df["ema_20"] = compute_ema(df["close"], 20)
-    # df["ema_50"] = compute_ema(df["close"], 50)
-    # df["macd"], df["macd_signal"] = compute_macd(df["close"])
-    # df["atr"] = compute_atr(df)
 
     df = compute_atr(df, period=14)
     df = compute_rsi(df, period=14)
@@ -91,5 +94,59 @@ def run_swing_lstm_reg_strategy(
             portfolio_btc = 0.0
 
     final_value = portfolio_usd + portfolio_btc * df["close"].iloc[-1]
-    return {"trades": trades, "final_value_usd": final_value,
-            "portfolio_usd": portfolio_usd, "portfolio_btc": portfolio_btc}
+
+    # Build last sequence for forecasting
+    last_seq = df[features].iloc[-SEQ_LEN:].values
+    last_seq_scaled = scaler_X.transform(last_seq)
+    last_seq_tensor = torch.tensor(last_seq_scaled, dtype=torch.float32)
+
+    forecast_df = forecast_future(
+        model,
+        last_seq_tensor,
+        scaler_X,
+        scaler_y,
+        n_steps=n_steps,
+        start_date=df["timestamp"].iloc[-1],
+        freq=freq  # match your data interval
+    )
+
+    
+    return {
+            "trades": trades, 
+            "final_value_usd": final_value,
+            "portfolio_usd": portfolio_usd, 
+            "portfolio_btc": portfolio_btc,
+            "forecast": forecast_df
+        }
+
+
+def forecast_future(model, last_seq, scaler_X, scaler_y, n_steps=7, start_date=None, freq="1D"):
+    """
+    Generate n_steps BTC forecasts using trained LSTM regression model.
+    
+    last_seq : torch.Tensor, shape (seq_len, n_features)
+    scaler   : fitted StandardScaler
+    start_date: datetime of last known actual
+    """
+    preds = []
+    seq = last_seq.clone().detach()
+
+    for _ in range(n_steps):
+        with torch.no_grad():
+            pred_scaled = model(seq.unsqueeze(0)).item()
+        pred_price = scaler_y.inverse_transform([[pred_scaled]])[0][0]
+        preds.append(pred_price)
+
+        # roll window forward: drop oldest, append new pred as prev_close
+        # NOTE: this assumes first column in features is prev_close
+        new_row = seq[-1].clone()
+        new_row[0] = scaler_X.transform([[pred_price] + [0]*(seq.shape[1]-1)])[0][0]  
+        seq = torch.cat([seq[1:], new_row.unsqueeze(0)], dim=0)
+
+    # Dates
+    if start_date is not None:
+        dates = pd.date_range(start=start_date, periods=n_steps+1, freq=freq)[1:]
+    else:
+        dates = list(range(n_steps))
+
+    return pd.DataFrame({"date": dates, "predicted": preds})

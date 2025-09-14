@@ -27,13 +27,13 @@ client = OpenAI(api_key=x)
 
 
 # ---------- Services ----------
-def run_all_strategies(budget: float):
+def run_all_strategies(budget: float, n_steps=7, freq="1D"):
     """Run all 4 strategies and prepare equity/metrics/trades."""
 
     dca        = run_dca_strategy(budget=budget, buy_amount=500, drop_trigger=0.03)
     atr        = run_atr_daytrading_strategy(budget=budget, trade_size=budget * 0.10)
     swing_ph   = run_swing_lstm_strategy(budget=budget, trade_size=budget * 0.20)
-    swing_reg  = run_swing_lstm_reg_strategy(budget=budget, trade_size=budget * 0.20)
+    swing_reg  = run_swing_lstm_reg_strategy(budget=budget, trade_size=budget * 0.20, n_steps=n_steps, freq=freq)
 
     px_dca   = get_ohlcv("BTCUSDT", "1d", 500)
     px_atr   = get_ohlcv("BTCUSDT", "30m", 1000)
@@ -153,6 +153,19 @@ app.layout = html.Div([
             step=1000,
             style={"marginRight": "10px", "width": "150px", "padding": "5px"}
         ),
+
+            html.Label("Forecast Steps:", style={"marginRight": "10px"}),
+                dcc.Input(
+                    id="steps-input", type="number", value=7, step=1,
+                    style={"marginRight": "20px", "width":"80px"}
+                ),
+
+                html.Label("Frequency:", style={"marginRight": "10px"}),
+                dcc.Input(
+                    id="freq-input", type="text", value="1D",
+                    style={"marginRight": "20px", "width":"80px"}
+                ),
+                
         html.Button(
             "Run Strategies",
             id="run-btn",
@@ -287,19 +300,36 @@ app.layout = html.Div([
         Output("metrics-table", "data")
     ],
     [Input("run-btn", "n_clicks")],
-    [State("budget-input", "value")]
+    [
+        State("budget-input", "value"),
+        State("steps-input", "value"),
+        State("freq-input", "value")
+     
+     ],
+    
 )
-def update_dashboard(n_clicks, budget):
+def update_dashboard(n_clicks, budget, n_steps, freq):
     if n_clicks == 0:
         return go.Figure(), go.Figure(), [], [], []
 
-    merged, trades_df, metrics_df, px_dca, dca, atr, swing_ph, swing_reg = run_all_strategies(budget)
+    merged, trades_df, metrics_df, px_dca, dca, atr, swing_ph, swing_reg = run_all_strategies(budget, n_steps=n_steps, freq=freq)
 
     fig_price = go.Figure()
     fig_price.add_trace(go.Scatter(
         x=px_dca["timestamp"], y=px_dca["close"],
         mode="lines", name="BTC Price", line=dict(color="#00cc96")
     ))
+
+    # === Add forecast (if available) ===
+    if swing_reg.get("forecast") is not None:
+        forecast_df = swing_reg["forecast"]
+        fig_price.add_trace(go.Scatter(
+            x=forecast_df["date"],
+            y=forecast_df["predicted"],
+            mode="lines+markers",
+            name="LSTM Forecast",
+            line=dict(dash="dot", color="yellow")
+        ))
 
     for strat, res, color in [
         ("DCA", dca, "#1f77b4"),
@@ -357,6 +387,8 @@ def update_dashboard(n_clicks, budget):
      State("chat-history", "children"),
      State("metrics-table", "data"),   # store metrics
      State("trades-table", "data")]    # store trades
+
+     
 )
 
 def update_chat(n_clicks, user_msg, history, metrics, trades):

@@ -80,3 +80,9 @@ Generally speaking, a MAPE under 5% in financial time-series forecasting is quit
 - Predicted values are comparatively smoother and lag the actual values - so, it means towards taking lower risks in swing trading.
 - Hence, the model is capturing the trend direction, but underestimates volatility and sharp jumps.
 - This is expected for LSTM regression - it minimizes average error, so tends to smoothen instead of chasing spikes.
+
+## DEMO
+
+https://github.com/user-attachments/assets/12d5418a-a901-46dc-9cb5-4417fb6f403e
+
+

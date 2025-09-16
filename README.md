@@ -81,6 +81,11 @@ Generally speaking, a MAPE under 5% in financial time-series forecasting is quit
 - Hence, the model is capturing the trend direction, but underestimates volatility and sharp jumps.
 - This is expected for LSTM regression - it minimizes average error, so tends to smoothen instead of chasing spikes.
 
+## REAL-TIME DEPLOYMENT ARCHITECTURE
+
+<img width="731" height="630" alt="Apziva_P5_RealTimeDeployment drawio" src="https://github.com/user-attachments/assets/4c6317bb-ea8c-4bae-91f1-f4809b4302f5" />
+
+
 ## DEMO
 
 https://github.com/user-attachments/assets/12d5418a-a901-46dc-9cb5-4417fb6f403e

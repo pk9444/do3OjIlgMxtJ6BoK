@@ -471,4 +471,4 @@ def toggle_chat(n_clicks, style):
 
 # ---------- Runner ----------
 if __name__ == "__main__":
-    app.run(debug=True, port=8000)
+    app.run(debug=True, port=8050)

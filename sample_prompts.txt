@@ -19,3 +19,6 @@
 -If BTC becomes more volatile, which strategy will likely perform better?
 -How should I allocate my budget across DCA, ATR, and LSTM regression?
 -What’s the biggest weakness of the ATR Stop-Loss strategy in these results?
+-Based on the ATR Stop-Loss strategy, when should I sell my BTC after today?
+-I bought BTC worth $110,000. What price should I sell to get best returns as per the ATR strategy?
+-What if I sell using the LSTM strategy? Would it be better than the ATR?

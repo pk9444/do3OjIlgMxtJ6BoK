@@ -6,7 +6,7 @@ import plotly.graph_objs as go
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
-
+import datetime
 # --- import your strategy + utils ---
 from strategies.dca import run_dca_strategy
 from strategies.atr_daytrading import run_atr_daytrading_strategy
@@ -390,43 +390,117 @@ def update_dashboard(n_clicks, budget, n_steps, freq):
 @app.callback(
     Output("chat-history", "children"),
     [Input("chat-send", "n_clicks")],
-    [State("chat-input", "value"), 
-     State("chat-history", "children"),
-     State("metrics-table", "data"),   # store metrics
-     State("trades-table", "data")]    # store trades
-
-     
+    [
+        State("chat-input", "value"),
+        State("chat-history", "children"),
+        State("metrics-table", "data"),
+        State("trades-table", "data"),
+    ],
 )
-
-def update_chat(n_clicks, user_msg, history, metrics, trades):
+def update_chat(n_clicks, user_msg, history, metrics_data, trades_data):
     if not n_clicks or not user_msg:
         return history
 
-    context = f"""
-    Current Strategy Performance:
-    {pd.DataFrame(metrics).to_string(index=False)}
-
-    Recent Trades:
-    {pd.DataFrame(trades).head(10).to_string(index=False)}
-    """
-
     try:
+        # --- Build DataFrames from inputs ---
+        mdf = pd.DataFrame(metrics_data) if metrics_data else pd.DataFrame()
+        tdf = pd.DataFrame(trades_data) if trades_data else pd.DataFrame()
+
+        # Ensure numeric types for key metrics
+        for col in [
+            "Final Value", "PnL %", "Sharpe", 
+            "Max Drawdown %", "Trades", 
+            "Win Rate %", "Profit Factor"
+        ]:
+            if col in mdf.columns:
+                mdf[col] = pd.to_numeric(mdf[col], errors="coerce")
+
+        # --- Extract insights ---
+        insights = []
+        if not mdf.empty:
+            if "PnL %" in mdf.columns and not mdf["PnL %"].isna().all():
+                best_pnl_row = mdf.loc[mdf["PnL %"].idxmax()]
+                insights.append(
+                    f"Best PnL: {best_pnl_row.get('Strategy')} ({best_pnl_row.get('PnL %'):.2f}%)"
+                )
+            if "Sharpe" in mdf.columns and not mdf["Sharpe"].isna().all():
+                best_sharpe_row = mdf.loc[mdf["Sharpe"].idxmax()]
+                insights.append(
+                    f"Best Sharpe: {best_sharpe_row.get('Strategy')} ({best_sharpe_row.get('Sharpe'):.2f})"
+                )
+            if "Max Drawdown %" in mdf.columns and not mdf["Max Drawdown %"].isna().all():
+                worst_dd_row = mdf.loc[mdf["Max Drawdown %"].idxmin()]
+                insights.append(
+                    f"Worst drawdown: {worst_dd_row.get('Strategy')} ({worst_dd_row.get('Max Drawdown %'):.2f}%)"
+                )
+        insights_text = "\n".join(insights) if insights else "No metrics available yet."
+
+        # --- Dates and last trade ---
+        today = datetime.date.today().strftime("%Y-%m-%d")
+        last_trade = tdf.tail(1).to_string(index=False) if not tdf.empty else "No trades yet."
+        recent_trades_text = (
+            tdf.tail(8).to_string(index=False) if not tdf.empty else "No trades yet."
+        )
+        metrics_table_text = mdf.to_string(index=False) if not mdf.empty else "No metrics yet."
+
+        # --- Strategy rules (explicit, so LLM grounds advice) ---
+        rules = (
+            "• DCA: Buy $500 when price drops ≥3% from the last buy; long-term hold, no fixed sell.\n"
+            "• ATR Day Trading: Position ≈10% of budget; stop-loss = entry − 1.5×ATR(14); "
+            "target = entry + 2×ATR(14).\n"
+            "• Swing LSTM (regression): BUY if model predicts ≥+1% vs current; SELL if ≤−1%; "
+            "otherwise hold.\n"
+            "• Portfolio safeguard: pause trading if equity drawdown ≥25%.\n"
+        )
+
+        # --- Full context for the LLM ---
+        context = f"""
+Today's date: {today}
+
+Current Strategy Performance (summary):
+{insights_text}
+
+Strategy rules:
+{rules}
+
+Full performance metrics:
+{metrics_table_text}
+
+Most recent trade:
+{last_trade}
+
+Recent trades (last 8):
+{recent_trades_text}
+
+Instructions:
+- Always ground BUY/SELL suggestions in the latest trade and ATR/thresholds.
+- Do NOT invent future dates. If the next BUY/SELL date is unknown, give price/ATR conditions instead.
+- Interpret "after today" relative to {today}.
+"""
+
+        # --- Call OpenAI ---
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a crypto trading assistant that analyzes strategy results."},
-                {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {user_msg}"}
+                {
+                    "role": "system",
+                    "content": "You are a crypto trading assistant. Use the provided rules, metrics, and trades "
+                               "to give concrete trading advice. When giving BUY/SELL recommendations, quote "
+                               "thresholds (price, ATR, stop-loss/target). Never fabricate dates."
+                },
+                {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {user_msg}"},
             ],
         )
         reply = resp.choices[0].message.content
+
     except Exception as e:
         reply = f"(Error: {e})"
 
-    # Format bubbles
+    # --- Format chat bubbles ---
     user_bubble = html.Div(
         user_msg,
         style={
-            "backgroundColor": "#2e7d32",   # greenish
+            "backgroundColor": "#2e7d32",
             "color": "white",
             "padding": "8px 12px",
             "borderRadius": "12px",
@@ -434,27 +508,24 @@ def update_chat(n_clicks, user_msg, history, metrics, trades):
             "maxWidth": "80%",
             "marginLeft": "auto",
             "alignSelf": "flex-end",
-        }
+        },
     )
-
     bot_bubble = html.Div(
         reply,
         style={
-            "backgroundColor": "#333333",   # dark gray
+            "backgroundColor": "#333333",
             "color": "white",
             "padding": "8px 12px",
             "borderRadius": "12px",
             "margin": "5px 0",
-            "maxWidth": "100%",
+            "maxWidth": "80%",
             "marginRight": "auto",
             "alignSelf": "flex-start",
-            "whiteSpace": "pre-line"
-        }
+        },
     )
 
-    # Append to history
-    new_history = (history or []) + [user_bubble, bot_bubble]
-    return new_history
+    return (history or []) + [user_bubble, bot_bubble]
+
 
 # ---------- Collapsible Chat Callback ----------
 @app.callback(
@@ -471,4 +542,4 @@ def toggle_chat(n_clicks, style):
 
 # ---------- Runner ----------
 if __name__ == "__main__":
-    app.run(debug=True, port=8000)
+    app.run(debug=True)

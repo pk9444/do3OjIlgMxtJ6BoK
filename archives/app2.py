@@ -390,43 +390,112 @@ def update_dashboard(n_clicks, budget, n_steps, freq):
 @app.callback(
     Output("chat-history", "children"),
     [Input("chat-send", "n_clicks")],
-    [State("chat-input", "value"), 
-     State("chat-history", "children"),
-     State("metrics-table", "data"),   # store metrics
-     State("trades-table", "data")]    # store trades
-
-     
+    [
+        State("chat-input", "value"), 
+        State("chat-history", "children"),
+        State("metrics-table", "data"),
+        State("trades-table", "data"),
+        State("price-graph", "figure"),   # <-- add this
+        State("equity-graph", "figure")   # <-- add this
+    ]
 )
 
-def update_chat(n_clicks, user_msg, history, metrics, trades):
+def update_chat(n_clicks, user_msg, history, metrics, trades, price_fig, equity_fig):
     if not n_clicks or not user_msg:
         return history
 
-    context = f"""
-    Current Strategy Performance:
-    {pd.DataFrame(metrics).to_string(index=False)}
+    try:
+        # --- Metrics summary ---
+        metrics_df = pd.DataFrame(metrics)
 
-    Recent Trades:
-    {pd.DataFrame(trades).head(10).to_string(index=False)}
-    """
+        # --- Trade frequency ---
+        trades_df = pd.DataFrame(trades)
+        trade_counts = trades_df.groupby("Strategy").size().reset_index(name="NumTrades")
+        trade_counts = trade_counts.sort_values("NumTrades", ascending=False)
 
+        # Make a plain-English summary (not just a table)
+        trade_summary_lines = []
+        for _, row in trade_counts.iterrows():
+            trade_summary_lines.append(f"{row['Strategy']} executed {row['NumTrades']} trades")
+        trade_summary_text = "\n".join(trade_summary_lines)
+
+        # Identify the most frequent strategy
+        most_freq_strat = trade_counts.iloc[0]["Strategy"]
+        most_freq_count = trade_counts.iloc[0]["NumTrades"]
+
+        # --- Last BUY/SELL signals ---
+        strat_signals = []
+        for strat in trades_df["Strategy"].unique():
+            buys = trades_df[(trades_df["Strategy"] == strat) & (trades_df["Action"].str.contains("BUY", na=False))]
+            sells = trades_df[(trades_df["Strategy"] == strat) & (trades_df["Action"].str.contains("SELL", na=False))]
+            last_buy = buys["Price"].dropna().iloc[-1] if not buys.empty else None
+            last_sell = sells["Price"].dropna().iloc[-1] if not sells.empty else None
+            strat_signals.append(f"{strat}: last BUY at ${last_buy if last_buy else 'N/A'}, last SELL at ${last_sell if last_sell else 'N/A'}")
+        signal_summary = "\n".join(strat_signals)
+
+        # --- BTC price snapshot (last 3 closes) ---
+        trace = price_fig["data"][0]
+        px_df = pd.DataFrame({"time": trace["x"], "price": trace["y"]})
+        price_snapshot = px_df.tail(3).to_string(index=False)
+
+        # --- ATR Stop-Loss estimated trailing stop ---
+        atr_stop_est = None
+        if not px_df.empty:
+            last_close = px_df["price"].iloc[-1]
+            last_20 = px_df["price"].tail(20)
+            volatility = last_20.max() - last_20.min()
+            atr_stop_est = last_close - 0.5 * volatility
+        atr_estimate_text = f"≈ ${atr_stop_est:.2f}" if atr_stop_est else "Not available"
+
+        # --- Context (plain, structured) ---
+        context = f"""
+        STRATEGY PERFORMANCE METRICS:
+        {metrics_df.to_string(index=False)}
+
+        TRADE FREQUENCY SUMMARY:
+        {trade_summary_text}
+        -> Most frequent strategy = {most_freq_strat} with {most_freq_count} trades.
+
+        LAST BUY/SELL SIGNALS:
+        {signal_summary}
+
+        ATR TRAILING STOP ESTIMATE: {atr_estimate_text}
+
+        RECENT BTC PRICES:
+        {price_snapshot}
+        """
+    except Exception as e:
+        context = f"(Error building context: {e})"
+
+    # --- GPT call ---
     try:
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a crypto trading assistant that analyzes strategy results."},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are Robin, a crypto trading assistant. "
+                        "You ALWAYS use the provided trade frequency summary, metrics, and signals. "
+                        "NEVER say you don't have enough data — the context includes everything you need. "
+                        "When asked about frequency, explicitly identify the strategy with the highest number of trades "
+                        "from the summary. "
+                        "When asked about selling, use the ATR estimate and last SELL signals. "
+                        "Do not generalize — always ground your answer in the numbers from the context."
+                    )
+                },
                 {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {user_msg}"}
             ],
         )
         reply = resp.choices[0].message.content
     except Exception as e:
-        reply = f"(Error: {e})"
+        reply = f"(Error calling model: {e})"
 
-    # Format bubbles
+    # --- Chat bubbles ---
     user_bubble = html.Div(
         user_msg,
         style={
-            "backgroundColor": "#2e7d32",   # greenish
+            "backgroundColor": "#2e7d32",
             "color": "white",
             "padding": "8px 12px",
             "borderRadius": "12px",
@@ -440,7 +509,7 @@ def update_chat(n_clicks, user_msg, history, metrics, trades):
     bot_bubble = html.Div(
         reply,
         style={
-            "backgroundColor": "#333333",   # dark gray
+            "backgroundColor": "#333333",
             "color": "white",
             "padding": "8px 12px",
             "borderRadius": "12px",
@@ -452,9 +521,10 @@ def update_chat(n_clicks, user_msg, history, metrics, trades):
         }
     )
 
-    # Append to history
-    new_history = (history or []) + [user_bubble, bot_bubble]
-    return new_history
+    return (history or []) + [user_bubble, bot_bubble]
+
+
+
 
 # ---------- Collapsible Chat Callback ----------
 @app.callback(
@@ -471,4 +541,4 @@ def toggle_chat(n_clicks, style):
 
 # ---------- Runner ----------
 if __name__ == "__main__":
-    app.run(debug=True, port=8000)
+    app.run(debug=True)
